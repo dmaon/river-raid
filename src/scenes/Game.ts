@@ -49,6 +49,9 @@ export class Game extends Scene {
     propGameObject: Phaser.GameObjects.Sprite
     finishLine: Phaser.Physics.Arcade.Group
     startMode: boolean
+    playerScore: number
+    scoreBoard: Phaser.GameObjects.BitmapText
+    startCounter: boolean
 
     constructor() {
         super('Game'); // Call the parent class constructor and set the scene key
@@ -56,11 +59,13 @@ export class Game extends Scene {
 
     preload() {
         // Initialize variables with default values
+        this.playerScore = 0
         this.counter = 0
         this.maxWalls = 30
         this.lifeChance = 3
         this.maxFirstEnemiesNumber = 2
         this.startMode = false;
+        this.startCounter = false;
         this.bulletInMotion = false;
         this.bulletSpeed = 400
         this.debugMode = false
@@ -134,10 +139,20 @@ export class Game extends Scene {
         // Add the first enemy to the scene
         this.addEnemy()
 
+        // Add scoreboard
+        this.AddScoreBoard()
+
         // Start the game when the space key is pressed
         this.input.keyboard.on('keydown-SPACE', () => {
             this.startMode = true
+            this.startCounter = true // Enable scoreboard
         });
+    }
+
+
+    AddScoreBoard() {
+        // Add scoreboard text
+        this.scoreBoard = this.add.bitmapText(10, 10, 'atari', this.playerScore.toString(), 20).setOrigin(0).setTint(0xFFFF00);
     }
 
     makeFinishLine(y: number) {
@@ -239,7 +254,6 @@ export class Game extends Scene {
         });
     }
 
-
     addPlane() {
         // Add the player's plane to the scene
         this.plane = this.physics.add.sprite(this.gameWidth / 2, this.gameHeight - 59, "plane");
@@ -251,11 +265,13 @@ export class Game extends Scene {
         // Initialize the bullet for the plane
         this.reloadPlaneBullet();
     }
+
     reloadPlaneBullet() {
         // Reload the plane's bullet and position it at the plane's current location
         this.bullet = this.physics.add.sprite(this.plane.x, this.plane.y, "bullet");
         this.bullet.setCollideWorldBounds(true); // Prevent the bullet from leaving the screen
     }
+
     fireBullet() {
         // Prevent firing if the bullet is already in motion
         if (this.bulletInMotion) {
@@ -284,6 +300,7 @@ export class Game extends Scene {
             });
         }
     }
+
     addEnemies() {
         // Define possible enemy positions (left and right)
         const enemyPositions: EnemyPosition[] = [{ key: "left", x: 256 }, { key: "right", x: this.gameWidth - 256 }];
@@ -402,14 +419,16 @@ export class Game extends Scene {
 
             setTimeout(() => {
                 this.scene.resume(); // Resume the scene after a short delay
+                this.startCounter = true // Enable scoreboard
             }, 500);
         }
     }
 
     takePlayerLife() {
+        this.startCounter = false // Disable scoreboard
         this.lifeChance--; // Decrease the player's remaining lives
         if (this.lifeChance <= 0) {
-            this.scene.start('GameOver'); // Start the GameOver scene when lives are over
+            this.scene.start('GameOver', { score: this.playerScore }); // Start the GameOver scene when lives are over
         }
     }
 
@@ -496,7 +515,14 @@ export class Game extends Scene {
             });
         }
     }
+
     update() {
+
+        // Increase player score
+        if (this.startCounter) {
+            this.playerScore += 1
+            this.scoreBoard.text = this.playerScore.toString()
+        }
 
         // Check if the game should start or if the player has no remaining lives
         if (!this.startMode || this.lifeChance <= 0) {
@@ -569,7 +595,7 @@ export class Game extends Scene {
             // Check if the game is finished by checking if the first wall has passed a certain threshold
             const firstWall = this.walls.getChildren()[0];
             if (firstWall.y > this.maxThr + (this.gameHeight / 2)) {
-                this.scene.start('PlayerWins'); // Start the PlayerWins scene if the game is finished
+                this.scene.start('PlayerWins', { score: this.playerScore }); // Start the PlayerWins scene if the game is finished
             }
 
             // Randomly add a new enemy with a certain chance

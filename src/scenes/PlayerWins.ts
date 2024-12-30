@@ -1,11 +1,20 @@
 import { Display, Scene } from 'phaser';
 
+type Prop = {
+    score: number
+}
+
 export class PlayerWins extends Scene {
     gameWidth: number
     gameHeight: number
+    score: number
 
     constructor() {
         super('PlayerWins');
+    }
+
+    init(prop: Prop) {
+        this.score = prop.score;
     }
 
     preload() {
@@ -19,7 +28,8 @@ export class PlayerWins extends Scene {
     }
 
     create() {
-        this.add.bitmapText(this.gameWidth / 2, this.gameHeight / 2, 'atari', 'You Win', 40).setOrigin(0.5).setTint(0xFFFF00);
+        this.add.bitmapText(this.gameWidth / 2, (this.gameHeight / 2) - 35, 'atari', 'You Win', 40).setOrigin(0.5).setTint(0xFFFF00);
+        this.add.bitmapText(this.gameWidth / 2, (this.gameHeight / 2) + 35, 'atari', `Score: ${this.score}`, 25).setOrigin(0.5).setTint(0xFFFF00);
 
         this.sound.stopAll()
         this.sound.add('playerWins').play();
