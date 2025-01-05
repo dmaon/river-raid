@@ -32,6 +32,7 @@ export class Game extends Scene {
     bulletInMotion: boolean
     bulletSpeed: number
     bulletFireTween: Phaser.Tweens.Tween
+    maxLifeChance: number
     lifeChance: number
     maxFirstEnemiesNumber: number
     enemyTypes: string[]
@@ -47,11 +48,14 @@ export class Game extends Scene {
     explosionFx: Phaser.Sound.HTML5AudioSound | Phaser.Sound.WebAudioSound | Phaser.Sound.NoAudioSound
     props: Phaser.GameObjects.Group
     propGameObject: Phaser.GameObjects.Sprite
+    playerLifeBar: Phaser.GameObjects.Sprite[]
     finishLine: Phaser.Physics.Arcade.Group
     startMode: boolean
     playerScore: number
+    highScore: number
     scoreBoard: Phaser.GameObjects.BitmapText
     startCounter: boolean
+    localStorageKey: string
 
     constructor() {
         super('Game'); // Call the parent class constructor and set the scene key
@@ -62,6 +66,7 @@ export class Game extends Scene {
         this.playerScore = 0
         this.counter = 0
         this.maxWalls = 30
+        this.maxLifeChance = 3
         this.lifeChance = 3
         this.maxFirstEnemiesNumber = 2
         this.startMode = false;
@@ -71,7 +76,11 @@ export class Game extends Scene {
         this.debugMode = false
         this.enemiesTweens = []
         this.enemies = [];
+        this.playerLifeBar = [];
         this.keyHoldDuration = 0;
+
+        this.localStorageKey = "river-raid-high-score"
+        this.highScore = this.getHighScore()
 
         // Types of enemies in the game
         this.enemyTypes = ["battleship", "helicopter"]
@@ -141,6 +150,9 @@ export class Game extends Scene {
 
         // Add scoreboard
         this.AddScoreBoard()
+
+        // Add lifebar
+        this.makeLifeBar()
 
         // Start the game when the space key is pressed
         this.input.keyboard.on('keydown-SPACE', () => {
@@ -266,6 +278,16 @@ export class Game extends Scene {
         this.reloadPlaneBullet();
     }
 
+    makeLifeBar() {
+        const spaceBetween = 40
+        Phaser.Actions.SetVisible(this.playerLifeBar, false)
+        this.playerLifeBar = []
+        for (let i = 0; i < this.lifeChance; i++) {
+            this.playerLifeBar.push(this.add.sprite(((this.gameWidth - 110) + i * spaceBetween) + ((this.maxLifeChance - this.lifeChance) * spaceBetween), 30, "plane").setScale(0.5));
+        }
+        console.log('lifes', this.lifeChance, '\nthis.playerLifeBar', this.playerLifeBar)
+    }
+
     reloadPlaneBullet() {
         // Reload the plane's bullet and position it at the plane's current location
         this.bullet = this.physics.add.sprite(this.plane.x, this.plane.y, "bullet");
@@ -336,6 +358,7 @@ export class Game extends Scene {
             "helicopter-fly"
         );
     }
+
     addEnemy() {
         // Define initial positions for enemies on the left and right
         const enemyPositions: EnemyPosition[] = [{ key: "left", x: 256 }, { key: "right", x: this.gameWidth - 256 }];
@@ -397,7 +420,7 @@ export class Game extends Scene {
                     yoyo: true, // Enable yoyo movement (back and forth)
                     duration: Phaser.Math.Between(900, 2000), // Random duration for the movement
                     ease: 'Linear', // Linear easing for the movement
-                    delay: this.debugMode == true ? 1000 * (index + 1) : Phaser.Math.Between(0, 1000), // Random delay or debug-dependent delay
+                    delay: Phaser.Math.Between(0, 1000), // Random delay or debug-dependent delay
                     repeat: -1, // Repeat the movement infinitely
                 })
             });
@@ -427,8 +450,21 @@ export class Game extends Scene {
     takePlayerLife() {
         this.startCounter = false // Disable scoreboard
         this.lifeChance--; // Decrease the player's remaining lives
+
+        // Update lifebar
+        this.makeLifeBar()
+
         if (this.lifeChance <= 0) {
-            this.scene.start('GameOver', { score: this.playerScore }); // Start the GameOver scene when lives are over
+            if (this.highScore < this.playerScore)
+                this.highScore = this.playerScore
+            this.scene.start('GameOver', { score: this.playerScore, highScore: this.highScore }); // Start the GameOver scene when lives are over
+
+
+            // Update hight score in localstorage based on previous high score
+            if (this.playerScore > this.getHighScore())
+                this.setHighScore()
+
+
         }
     }
 
@@ -516,17 +552,30 @@ export class Game extends Scene {
         }
     }
 
+
+    getHighScore(): number {
+        const highScore = localStorage.getItem(this.localStorageKey)
+        if (highScore === null)
+            return 0
+        return Number.parseInt(highScore)
+    }
+
+    setHighScore() {
+        localStorage.setItem(this.localStorageKey, this.highScore.toString())
+    }
+
     update() {
 
-        // Increase player score
-        if (this.startCounter) {
-            this.playerScore += 1
-            this.scoreBoard.text = this.playerScore.toString()
-        }
 
         // Check if the game should start or if the player has no remaining lives
         if (!this.startMode || this.lifeChance <= 0) {
             return; // Exit the update function if the game hasn't started or if player has no lives left
+        }
+
+        // Increase player score
+        if (this.startCounter) {
+            this.playerScore += 1
+            this.scoreBoard.setText(this.playerScore.toString())
         }
 
         // Check if the plane is currently exploding
@@ -595,7 +644,12 @@ export class Game extends Scene {
             // Check if the game is finished by checking if the first wall has passed a certain threshold
             const firstWall = this.walls.getChildren()[0];
             if (firstWall.y > this.maxThr + (this.gameHeight / 2)) {
-                this.scene.start('PlayerWins', { score: this.playerScore }); // Start the PlayerWins scene if the game is finished
+                if (this.highScore < this.playerScore)
+                    this.highScore = this.playerScore
+                this.scene.start('PlayerWins', { score: this.playerScore, highScore: this.highScore }); // Start the PlayerWins scene if the game is finished
+                // Update hight score in localstorage based on previous high score
+                if (this.playerScore > this.getHighScore())
+                    this.setHighScore()
             }
 
             // Randomly add a new enemy with a certain chance

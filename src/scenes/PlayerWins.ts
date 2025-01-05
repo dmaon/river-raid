@@ -2,12 +2,14 @@ import { Display, Scene } from 'phaser';
 
 type Prop = {
     score: number
+    highScore: number
 }
 
 export class PlayerWins extends Scene {
     gameWidth: number
     gameHeight: number
     score: number
+    highScore: number
 
     constructor() {
         super('PlayerWins');
@@ -15,6 +17,7 @@ export class PlayerWins extends Scene {
 
     init(prop: Prop) {
         this.score = prop.score;
+        this.highScore = prop.highScore;
     }
 
     preload() {
@@ -24,12 +27,15 @@ export class PlayerWins extends Scene {
         this.load.setPath('assets');
         this.load.bitmapFont('atari', 'fonts/bitmap/atari-classic.png', 'fonts/bitmap/atari-classic.xml');
 
+        this.sound.stopAll();
         this.load.audio('playerWins', ['sounds/winner.wav']);
     }
 
     create() {
-        this.add.bitmapText(this.gameWidth / 2, (this.gameHeight / 2) - 35, 'atari', 'You Win', 40).setOrigin(0.5).setTint(0xFFFF00);
-        this.add.bitmapText(this.gameWidth / 2, (this.gameHeight / 2) + 35, 'atari', `Score: ${this.score}`, 25).setOrigin(0.5).setTint(0xFFFF00);
+        this.add.bitmapText(this.gameWidth / 2, (this.gameHeight / 2) - 50, 'atari', 'You Win', 60).setOrigin(0.5).setTint(0xFFFF00);
+        this.add.bitmapText(this.gameWidth / 2, (this.gameHeight / 2) + 35, 'atari', `Score: ${this.score}`, 30).setOrigin(0.5).setTint(0xFFFF00);
+        this.add.bitmapText(this.gameWidth / 2, (this.gameHeight / 2) + 100, 'atari', `High Score: ${this.highScore}`, 20).setOrigin(0.5).setTint(0xFFFF00);
+
 
         this.sound.stopAll()
         this.sound.add('playerWins').play();

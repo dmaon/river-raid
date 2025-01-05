@@ -3,12 +3,14 @@ import { Display, Scene } from 'phaser';
 
 type Prop = {
     score: number
+    // highScore: number
 }
 
 export class GameOver extends Scene {
     gameWidth: number
     gameHeight: number
     score: number
+    highScore: number
 
     constructor() {
         super('GameOver');
@@ -16,6 +18,7 @@ export class GameOver extends Scene {
 
     init(prop: Prop) {
         this.score = prop.score;
+        this.highScore = prop.highScore;
     }
 
     preload() {
@@ -29,8 +32,9 @@ export class GameOver extends Scene {
     }
 
     create() {
-        this.add.bitmapText(this.gameWidth / 2, (this.gameHeight / 2) - 35, 'atari', 'Game Over', 40).setOrigin(0.5).setTint(0xFFFF00);
-        this.add.bitmapText(this.gameWidth / 2, (this.gameHeight / 2) + 35, 'atari', `Score: ${this.score}`, 25).setOrigin(0.5).setTint(0xFFFF00);
+        this.add.bitmapText(this.gameWidth / 2, (this.gameHeight / 2) - 50, 'atari', 'Game Over', 60).setOrigin(0.5).setTint(0xFFFF00);
+        this.add.bitmapText(this.gameWidth / 2, (this.gameHeight / 2) + 35, 'atari', `Score: ${this.score.toString()}`, 30).setOrigin(0.5).setTint(0xFFFF00);
+        this.add.bitmapText(this.gameWidth / 2, (this.gameHeight / 2) + 100, 'atari', `High Score: ${this.highScore.toString()}`, 20).setOrigin(0.5).setTint(0xFFFF00);
 
         this.sound.stopAll();
         this.sound.add('gameOver').play();
