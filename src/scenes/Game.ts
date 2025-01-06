@@ -83,7 +83,7 @@ export class Game extends Scene {
         this.highScore = this.getHighScore()
 
         // Types of enemies in the game
-        this.enemyTypes = ["battleship", "helicopter"]
+        this.enemyTypes = ["battleship", "helicopter", "airplane"]
 
         // Set movement speed limits
         this.moveSpeed = 5; // Base speed
@@ -115,6 +115,10 @@ export class Game extends Scene {
         this.load.spritesheet("battleship", "ship.png", {
             frameWidth: 128,
             frameHeight: 32,
+        });
+        this.load.spritesheet("airplane", "airplane.png", {
+            frameWidth: 64,
+            frameHeight: 25,
         });
 
         // Load sound effects for explosions and plane engine
@@ -211,7 +215,7 @@ export class Game extends Scene {
     }
 
     createAnimation() {
-        // Create animations for plane, helicopter, and battleship
+        // Create animations for plane, helicopter, battleship, and airplane
 
         // Plane animations
         this.anims.create({
@@ -264,6 +268,15 @@ export class Game extends Scene {
             frameRate: 5, // Slower explosion animation
             repeat: 0, // Play once and stop
         });
+
+        // Airplane animations
+        // Create an animation for the enemy airplane exploding
+        this.anims.create({
+            key: "airplane-explode",
+            frames: this.anims.generateFrameNumbers("airplane", { start: 1, end: 2 }),
+            frameRate: 5, // Slower explosion animation
+            repeat: 0, // Play once and stop
+        });
     }
 
     addPlane() {
@@ -285,7 +298,6 @@ export class Game extends Scene {
         for (let i = 0; i < this.lifeChance; i++) {
             this.playerLifeBar.push(this.add.sprite(((this.gameWidth - 110) + i * spaceBetween) + ((this.maxLifeChance - this.lifeChance) * spaceBetween), 30, "plane").setScale(0.5));
         }
-        console.log('lifes', this.lifeChance, '\nthis.playerLifeBar', this.playerLifeBar)
     }
 
     reloadPlaneBullet() {
@@ -323,59 +335,30 @@ export class Game extends Scene {
         }
     }
 
-    addEnemies() {
-        // Define possible enemy positions (left and right)
-        const enemyPositions: EnemyPosition[] = [{ key: "left", x: 256 }, { key: "right", x: this.gameWidth - 256 }];
-        let randomYPosition: number; // Y position of the enemy
-        let randomEnemy: string; // Type of enemy (e.g., battleship, helicopter)
-        let randomEnemyLocation: EnemyPosition; // Random position for the enemy
-
-        for (let i = 0; i < this.maxFirstEnemiesNumber; i++) {
-            // Generate a random Y position within the visible area
-            randomYPosition = Phaser.Math.Between(0, this.gameHeight - 200);
-
-            // Randomly pick an enemy type and location
-            randomEnemy = Phaser.Math.RND.pick(this.enemyTypes);
-            randomEnemyLocation = Phaser.Math.RND.pick(enemyPositions);
-
-            // Create the enemy sprite and set its properties
-            let enemy = this.physics.add.sprite(randomEnemyLocation.x, randomYPosition, randomEnemy) as CustomSprite;
-            enemy.setFlipX(randomEnemyLocation.key == "right"); // Flip sprite if positioned on the right
-            enemy.setCollideWorldBounds(true); // Prevent the enemy from leaving the screen
-            enemy.enemyIdentifier = `${randomEnemy}${i}`; // Assign a unique identifier
-
-            // Add collision detection between the plane, bullet, and enemy
-            this.physics.add.collider(this.plane, enemy, this.collidePlaneWithEnemy.bind(this));
-            this.physics.add.collider(this.bullet, enemy, this.hitEnemy.bind(this));
-
-            // Add the enemy to the enemies array
-            this.enemies.push(enemy);
-        }
-
-        // Play the flying animation for all helicopter enemies
-        Phaser.Actions.PlayAnimation(
-            this.enemies.filter(enemy => enemy.texture.key == "helicopter"),
-            "helicopter-fly"
-        );
-    }
-
     addEnemy() {
         // Define initial positions for enemies on the left and right
         const enemyPositions: EnemyPosition[] = [{ key: "left", x: 256 }, { key: "right", x: this.gameWidth - 256 }];
+        const airplaneEnemyPositions: EnemyPosition[] = [{ key: "left", x: -256 }, { key: "right", x: this.gameWidth + 256 }];
 
         // Randomly determine the Y position and pick a random enemy
         let randomYPosition: number;
         let randomEnemy: string;
         let randomEnemyLocation: EnemyPosition;
 
-        randomYPosition = Phaser.Math.Between(0, this.gameHeight / 4); // Random Y position between 0 and one-quarter of the game height
+
         randomEnemy = Phaser.Math.RND.pick(this.enemyTypes); // Randomly pick an enemy type
-        randomEnemyLocation = Phaser.Math.RND.pick(enemyPositions); // Randomly pick an enemy position (left or right)
+        const enemyIsAirplane = randomEnemy === "airplane"
+        randomEnemyLocation = enemyIsAirplane ? Phaser.Math.RND.pick(airplaneEnemyPositions) : Phaser.Math.RND.pick(enemyPositions); // Randomly pick an enemy position (left or right)
+
+        randomYPosition = Phaser.Math.Between(0, this.gameHeight / 4); // Random Y position between 0 and one-quarter of the game height for battleship and helicopter
+
+        if (enemyIsAirplane)
+            randomYPosition = Phaser.Math.Between(0, 50); // Random Y position between 0 and one-quarter of the game height for airplane only
 
         // Add the enemy sprite to the physics world and set its properties
         let enemy = this.physics.add.sprite(randomEnemyLocation.x, randomYPosition, randomEnemy) as CustomSprite;
         enemy.setFlipX(randomEnemyLocation.key == "right"); // Flip the enemy horizontally if it's on the right side
-        enemy.setCollideWorldBounds(true); // Enable collision with world bounds
+        enemy.setCollideWorldBounds(enemyIsAirplane ? false : true); // Enable collision with world bounds
         enemy.enemyIdentifier = `${randomEnemy}${this.enemies.length + 1}`; // Assign a unique identifier to the enemy
 
         // Add collision between the plane and the enemy
@@ -389,21 +372,40 @@ export class Game extends Scene {
         Phaser.Actions.PlayAnimation(this.enemies.filter(enemy => enemy.texture.key == "helicopter"), "helicopter-fly");
 
         // Add a movement tween for the enemy to move back and forth
-        this.enemiesTweens.push({
-            enemyIdentifier: enemy.enemyIdentifier, tween: this.tweens.add({
-                targets: enemy,
-                x: {
-                    from: enemy.x,
-                    to: enemy.x == 256 ? this.gameWidth - 256 : 256 // Move the enemy from left to right or vice versa
-                },
-                flipX: true, // Flip the enemy horizontally
-                yoyo: true, // Enable yoyo movement (back and forth)
-                duration: Phaser.Math.Between(900, 2000), // Random duration for the movement
-                ease: 'Linear', // Linear easing for the movement
-                delay: this.debugMode == true ? 1000 * (this.enemies.length + 1) : Phaser.Math.Between(0, 1000), // Random delay or debug-dependent delay
-                repeat: -1, // Repeat the movement infinitely
-            })
-        });
+        if (!enemyIsAirplane) {
+            this.enemiesTweens.push({
+                enemyIdentifier: enemy.enemyIdentifier, tween: this.tweens.add({
+                    targets: enemy,
+                    x: {
+                        from: enemy.x,
+                        to: enemy.x == 256 ? this.gameWidth - 256 : 256 // Move the enemy from left to right or vice versa
+                    },
+                    flipX: true, // Flip the enemy horizontally
+                    yoyo: true, // Enable yoyo movement (back and forth)
+                    duration: Phaser.Math.Between(900, 2000), // Random duration for the movement
+                    ease: 'Linear', // Linear easing for the movement
+                    delay: Phaser.Math.Between(0, 1000), // Random delay or debug-dependent delay
+                    repeat: -1, // Repeat the movement infinitely
+                })
+            });
+        } else {
+            this.enemiesTweens.push({
+                enemyIdentifier: enemy.enemyIdentifier, tween: this.tweens.add({
+                    targets: enemy,
+                    x: {
+                        from: enemy.x,
+                        to: enemy.x == -256 ? this.gameWidth + 256 : -256 // Move the enemy from left to right or vice versa
+                    },
+                    flipX: true, // Flip the enemy horizontally
+                    yoyo: false,
+                    duration: Phaser.Math.Between(900, 2000), // Random duration for the movement
+                    ease: 'Linear', // Linear easing for the movement
+                    delay: Phaser.Math.Between(0, 1000), // Random delay or debug-dependent delay
+                    repeat: 0, // Repeat the movement infinitely
+                })
+            });
+
+        }
     }
 
     makeEnemiesTween() {
@@ -501,6 +503,8 @@ export class Game extends Scene {
             enemy.anims.play("helicopter-explode");
         } else if (enemy.texture.key == "battleship") {
             enemy.anims.play("battleship-explode");
+        } else if (enemy.texture.key == "airplane") {
+            enemy.anims.play("airplane-explode");
         }
 
         // Disable collision by setting the body.enable to false after the explosion
