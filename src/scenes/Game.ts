@@ -34,7 +34,6 @@ export class Game extends Scene {
     bulletFireTween: Phaser.Tweens.Tween
     maxLifeChance: number
     lifeChance: number
-    maxFirstEnemiesNumber: number
     enemyTypes: string[]
     debugMode: boolean
     enemiesTweens: EnemiesTweens[]
@@ -65,10 +64,9 @@ export class Game extends Scene {
         // Initialize variables with default values
         this.playerScore = 0
         this.counter = 0
-        this.maxWalls = 30
+        this.maxWalls = 300
         this.maxLifeChance = 3
         this.lifeChance = 3
-        this.maxFirstEnemiesNumber = 2
         this.startMode = false;
         this.startCounter = false;
         this.bulletInMotion = false;
@@ -516,6 +514,17 @@ export class Game extends Scene {
         enemy.on('animationcomplete', () => {
             enemy.destroy();
         });
+
+        // Increase more score
+        this.increaseMoreScore(10);
+
+    }
+
+    increaseMoreScore(score: number) {
+        if (this.startCounter) {
+            this.playerScore += score
+            this.scoreBoard.setText(this.playerScore.toString())
+        }
     }
 
     collidePlaneWithEnemy(plane: Phaser.Physics.Arcade.Sprite, enemy: Phaser.Physics.Arcade.Sprite) {
@@ -535,12 +544,23 @@ export class Game extends Scene {
             enemy.anims.play("helicopter-explode");
         } else if (enemy.texture.key == "battleship") {
             enemy.anims.play("battleship-explode");
+        } else if (enemy.texture.key == "airplane") {
+            enemy.anims.play("airplane-explode");
         }
+
+        // Disable collision by setting the body.enable to false after the explosion
+        if (enemy.body) {
+            enemy.body.enable = false;
+        }
+
 
         // Destroy the enemy after the explosion animation is complete
         enemy.on('animationcomplete', () => {
             enemy.destroy();
         });
+
+        // Increase more score
+        this.increaseMoreScore(10);
 
         // If the plane is not already exploding, play the plane explosion animation
         if (plane.anims.currentAnim?.key !== "plane-explode") {
@@ -577,10 +597,7 @@ export class Game extends Scene {
         }
 
         // Increase player score
-        if (this.startCounter) {
-            this.playerScore += 1
-            this.scoreBoard.setText(this.playerScore.toString())
-        }
+        this.increaseMoreScore(1)
 
         // Check if the plane is currently exploding
         const planeExplode: boolean = this.plane.anims.currentAnim?.key === "plane-explode";
@@ -606,60 +623,58 @@ export class Game extends Scene {
         }
 
         // Increment counter to track the frame updates
-        if (true) {
-            this.counter++;
+        this.counter++;
 
-            // Check if the up arrow key is being held down to increase speed
-            if (this.cursors.up.isDown || (this.cursors.up.isDown && (this.cursors.left.isDown || this.cursors.right.isDown))) {
-                this.keyHoldDuration += 10; // Increase the hold duration
-                this.planeEngineFx.setRate(1.5); // Speed up the plane engine sound effect
-            } else if (!this.cursors.up.isDown && !this.cursors.left.isDown && !this.cursors.right.isDown) {
-                this.keyHoldDuration = 0; // Reset the speed if no direction key is pressed
-                this.planeEngineFx.setRate(1); // Reset the engine sound effect to normal speed
+        // Check if the up arrow key is being held down to increase speed
+        if (this.cursors.up.isDown || (this.cursors.up.isDown && (this.cursors.left.isDown || this.cursors.right.isDown))) {
+            this.keyHoldDuration += 10; // Increase the hold duration
+            this.planeEngineFx.setRate(1.5); // Speed up the plane engine sound effect
+        } else if (!this.cursors.up.isDown && !this.cursors.left.isDown && !this.cursors.right.isDown) {
+            this.keyHoldDuration = 0; // Reset the speed if no direction key is pressed
+            this.planeEngineFx.setRate(1); // Reset the engine sound effect to normal speed
+        }
+
+        // Calculate the plane's speed based on the hold duration, clamping it within the speed range
+        let speed = Phaser.Math.Clamp(this.moveSpeed + (this.keyHoldDuration / 100), this.moveSpeed, this.maxSpeed);
+
+        // If the down arrow key is pressed, reduce the speed and change the engine sound
+        if (this.cursors.down.isDown) {
+            speed = 3; // Slow down the plane significantly
+            this.planeEngineFx.setRate(0.5); // Slow down the engine sound effect
+        }
+
+        // Play the engine sound if it isn't already playing
+        if (!this.planeEngineFx.isPlaying) {
+            this.planeEngineFx.play();
+        }
+
+        // Move enemies based on the current speed
+        this.enemies.forEach(enemy => {
+            enemy.y += speed; // Move enemies downwards
+            if (enemy.y >= this.gameHeight - 29) {
+                enemy.destroy(); // Destroy enemies that move past the bottom of the screen
             }
+        });
 
-            // Calculate the plane's speed based on the hold duration, clamping it within the speed range
-            let speed = Phaser.Math.Clamp(this.moveSpeed + (this.keyHoldDuration / 100), this.moveSpeed, this.maxSpeed);
+        // Move the walls, finish line, and props based on the speed
+        this.walls.incY(speed); // Move the walls downwards
+        this.finishLine.incY(speed); // Move the finish line downwards
+        this.props.incY(speed); // Move props (like obstacles) downwards
 
-            // If the down arrow key is pressed, reduce the speed and change the engine sound
-            if (this.cursors.down.isDown) {
-                speed = 3; // Slow down the plane significantly
-                this.planeEngineFx.setRate(0.5); // Slow down the engine sound effect
-            }
+        // Check if the game is finished by checking if the first wall has passed a certain threshold
+        const firstWall = this.walls.getChildren()[0];
+        if (firstWall.y > this.maxThr + (this.gameHeight / 2)) {
+            if (this.highScore < this.playerScore)
+                this.highScore = this.playerScore
+            this.scene.start('PlayerWins', { score: this.playerScore, highScore: this.highScore }); // Start the PlayerWins scene if the game is finished
+            // Update hight score in localstorage based on previous high score
+            if (this.playerScore > this.getHighScore())
+                this.setHighScore()
+        }
 
-            // Play the engine sound if it isn't already playing
-            if (!this.planeEngineFx.isPlaying) {
-                this.planeEngineFx.play();
-            }
-
-            // Move enemies based on the current speed
-            this.enemies.forEach(enemy => {
-                enemy.y += speed; // Move enemies downwards
-                if (enemy.y >= this.gameHeight - 29) {
-                    enemy.destroy(); // Destroy enemies that move past the bottom of the screen
-                }
-            });
-
-            // Move the walls, finish line, and props based on the speed
-            this.walls.incY(speed); // Move the walls downwards
-            this.finishLine.incY(speed); // Move the finish line downwards
-            this.props.incY(speed); // Move props (like obstacles) downwards
-
-            // Check if the game is finished by checking if the first wall has passed a certain threshold
-            const firstWall = this.walls.getChildren()[0];
-            if (firstWall.y > this.maxThr + (this.gameHeight / 2)) {
-                if (this.highScore < this.playerScore)
-                    this.highScore = this.playerScore
-                this.scene.start('PlayerWins', { score: this.playerScore, highScore: this.highScore }); // Start the PlayerWins scene if the game is finished
-                // Update hight score in localstorage based on previous high score
-                if (this.playerScore > this.getHighScore())
-                    this.setHighScore()
-            }
-
-            // Randomly add a new enemy with a certain chance
-            if (this.counter % Phaser.Math.Between(70, 100) == 0) {
-                this.addEnemy(); // Add a new enemy if the counter reaches a certain value
-            }
+        // Randomly add a new enemy with a certain chance
+        if (this.counter % Phaser.Math.Between(70, 100) == 0) {
+            this.addEnemy(); // Add a new enemy if the counter reaches a certain value
         }
 
         // Check if the space key is pressed to fire bullets
