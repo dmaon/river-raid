@@ -61,6 +61,7 @@ export class Game extends Scene {
     enemyMinSpeed: integer;
     enemyMaxSpeed: integer;
     enemyStartMovement: integer;
+    maxYPosition: integer;
 
     constructor() {
         super('Game'); // Call the parent class constructor and set the scene key
@@ -70,6 +71,7 @@ export class Game extends Scene {
         // Initialize variables with default values
         this.difficultyLevel = 'easy'
         this.addEnemyChance = 70
+        this.maxYPosition = 40
         this.playerScore = 0
         this.counter = 0
         this.maxWalls = 300
@@ -360,10 +362,10 @@ export class Game extends Scene {
         const enemyIsAirplane = randomEnemy === "airplane"
         randomEnemyLocation = enemyIsAirplane ? Phaser.Math.RND.pick(airplaneEnemyPositions) : Phaser.Math.RND.pick(enemyPositions); // Randomly pick an enemy position (left or right)
 
-        randomYPosition = Phaser.Math.Between(0, this.gameHeight / 4); // Random Y position between 0 and one-quarter of the game height for battleship and helicopter
+        randomYPosition = Phaser.Math.Between(0, this.maxYPosition); // Random Y position between 0 and one-quarter of the game height for battleship and helicopter
 
         if (enemyIsAirplane)
-            randomYPosition = Phaser.Math.Between(0, 50); // Random Y position between 0 and one-quarter of the game height for airplane only
+            randomYPosition = Phaser.Math.Between(0, this.maxYPosition); // Random Y position between 0 and one-quarter of the game height for airplane only
 
         // Add the enemy sprite to the physics world and set its properties
         let enemy = this.physics.add.sprite(randomEnemyLocation.x, randomYPosition, randomEnemy) as CustomSprite;
@@ -596,34 +598,39 @@ export class Game extends Scene {
 
         switch (this.difficultyLevel) {
             case 'easy':
-                this.addEnemyChance = 70;
-                this.enemyMinSpeed = 900;
-                this.enemyMaxSpeed = 2000;
-                this.enemyStartMovement = 1000;
+                this.addEnemyChance = 70
+                this.enemyMinSpeed = 900
+                this.enemyMaxSpeed = 2000
+                this.enemyStartMovement = 1000
+                this.maxYPosition = 40
                 break;
             case 'normal':
-                this.addEnemyChance = 65;
-                this.enemyMinSpeed = 850;
-                this.enemyMaxSpeed = 1500;
-                this.enemyStartMovement = 800;
+                this.addEnemyChance = 65
+                this.enemyMinSpeed = 850
+                this.enemyMaxSpeed = 1500
+                this.enemyStartMovement = 800
+                this.maxYPosition = 30
                 break;
             case 'hard':
-                this.addEnemyChance = 60;
-                this.enemyMinSpeed = 750;
-                this.enemyMaxSpeed = 1000;
-                this.enemyStartMovement = 600;
+                this.addEnemyChance = 60
+                this.enemyMinSpeed = 750
+                this.enemyMaxSpeed = 1000
+                this.enemyStartMovement = 600
+                this.maxYPosition = 20
                 break;
             case 'insane':
-                this.addEnemyChance = 55;
-                this.enemyMinSpeed = 700;
-                this.enemyMaxSpeed = 950;
-                this.enemyStartMovement = 400;
+                this.addEnemyChance = 55
+                this.enemyMinSpeed = 700
+                this.enemyMaxSpeed = 950
+                this.enemyStartMovement = 400
+                this.maxYPosition = 10
                 break;
             case 'alien':
-                this.addEnemyChance = 50;
-                this.enemyMinSpeed = 500;
-                this.enemyMaxSpeed = 900;
-                this.enemyStartMovement = 200;
+                this.addEnemyChance = 50
+                this.enemyMinSpeed = 500
+                this.enemyMaxSpeed = 900
+                this.enemyStartMovement = 200
+                this.maxYPosition = 0
                 break;
         }
     }
@@ -638,6 +645,9 @@ export class Game extends Scene {
 
         // Increase player score
         this.increaseMoreScore(1)
+
+        // Change game difficulty
+        this.changeGameDifficulty()
 
         // Check if the plane is currently exploding
         const planeExplode: boolean = this.plane.anims.currentAnim?.key === "plane-explode";
