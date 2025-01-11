@@ -11,6 +11,7 @@ type EnemiesTweens = {
     tween: Phaser.Tweens.Tween
 }
 
+
 // Custom sprite interface for enemy identification
 interface CustomSprite extends Phaser.Physics.Arcade.Sprite {
     enemyIdentifier: string;
@@ -55,6 +56,11 @@ export class Game extends Scene {
     scoreBoard: Phaser.GameObjects.BitmapText
     startCounter: boolean
     localStorageKey: string
+    difficultyLevel: "easy" | "normal" | "hard" | "insane" | "alien"
+    addEnemyChance: integer
+    enemyMinSpeed: integer;
+    enemyMaxSpeed: integer;
+    enemyStartMovement: integer;
 
     constructor() {
         super('Game'); // Call the parent class constructor and set the scene key
@@ -62,6 +68,8 @@ export class Game extends Scene {
 
     preload() {
         // Initialize variables with default values
+        this.difficultyLevel = 'easy'
+        this.addEnemyChance = 70
         this.playerScore = 0
         this.counter = 0
         this.maxWalls = 300
@@ -76,6 +84,10 @@ export class Game extends Scene {
         this.enemies = [];
         this.playerLifeBar = [];
         this.keyHoldDuration = 0;
+        this.enemyMinSpeed = 900;
+        this.enemyMaxSpeed = 2000;
+        this.enemyStartMovement = 1000;
+
 
         this.localStorageKey = "river-raid-high-score"
         this.highScore = this.getHighScore()
@@ -380,9 +392,9 @@ export class Game extends Scene {
                     },
                     flipX: true, // Flip the enemy horizontally
                     yoyo: true, // Enable yoyo movement (back and forth)
-                    duration: Phaser.Math.Between(900, 2000), // Random duration for the movement
+                    duration: Phaser.Math.Between(this.enemyMinSpeed, this.enemyMaxSpeed), // Random duration for the movement
                     ease: 'Linear', // Linear easing for the movement
-                    delay: Phaser.Math.Between(0, 1000), // Random delay or debug-dependent delay
+                    delay: Phaser.Math.Between(0, this.enemyStartMovement), // Random delay or debug-dependent delay
                     repeat: -1, // Repeat the movement infinitely
                 })
             });
@@ -396,7 +408,7 @@ export class Game extends Scene {
                     },
                     flipX: true, // Flip the enemy horizontally
                     yoyo: false,
-                    duration: Phaser.Math.Between(900, 2000), // Random duration for the movement
+                    duration: Phaser.Math.Between(this.enemyMinSpeed, this.enemyMaxSpeed), // Random duration for the movement
                     ease: 'Linear', // Linear easing for the movement
                     delay: Phaser.Math.Between(0, 1000), // Random delay or debug-dependent delay
                     repeat: 0, // Repeat the movement infinitely
@@ -404,27 +416,6 @@ export class Game extends Scene {
             });
 
         }
-    }
-
-    makeEnemiesTween() {
-        // Create tweens for all enemies to move back and forth
-        this.enemies.forEach((chunk: CustomSprite, index: number) => {
-            this.enemiesTweens.push({
-                enemyIdentifier: chunk.enemyIdentifier, tween: this.tweens.add({
-                    targets: chunk,
-                    x: {
-                        from: chunk.x,
-                        to: chunk.x == 256 ? this.gameWidth - 256 : 256 // Move the enemy from left to right or vice versa
-                    },
-                    flipX: true, // Flip the enemy horizontally
-                    yoyo: true, // Enable yoyo movement (back and forth)
-                    duration: Phaser.Math.Between(900, 2000), // Random duration for the movement
-                    ease: 'Linear', // Linear easing for the movement
-                    delay: Phaser.Math.Between(0, 1000), // Random delay or debug-dependent delay
-                    repeat: -1, // Repeat the movement infinitely
-                })
-            });
-        });
     }
 
     resetPlanePosition() {
@@ -588,6 +579,55 @@ export class Game extends Scene {
         localStorage.setItem(this.localStorageKey, this.highScore.toString())
     }
 
+
+    changeGameDifficulty() {
+
+        // Change game difficulty based on player score
+        this.difficultyLevel = 'easy';
+        if (this.playerScore >= 3000 && this.playerScore < 5000) {
+            this.difficultyLevel = 'normal'
+        } else if (this.playerScore >= 5000 && this.playerScore < 7000) {
+            this.difficultyLevel = 'hard'
+        } else if (this.playerScore >= 7000 && this.playerScore < 10000) {
+            this.difficultyLevel = 'insane'
+        } else if (this.playerScore >= 10000) {
+            this.difficultyLevel = 'alien'
+        }
+
+        switch (this.difficultyLevel) {
+            case 'easy':
+                this.addEnemyChance = 70;
+                this.enemyMinSpeed = 900;
+                this.enemyMaxSpeed = 2000;
+                this.enemyStartMovement = 1000;
+                break;
+            case 'normal':
+                this.addEnemyChance = 65;
+                this.enemyMinSpeed = 850;
+                this.enemyMaxSpeed = 1500;
+                this.enemyStartMovement = 800;
+                break;
+            case 'hard':
+                this.addEnemyChance = 60;
+                this.enemyMinSpeed = 750;
+                this.enemyMaxSpeed = 1000;
+                this.enemyStartMovement = 600;
+                break;
+            case 'insane':
+                this.addEnemyChance = 55;
+                this.enemyMinSpeed = 700;
+                this.enemyMaxSpeed = 950;
+                this.enemyStartMovement = 400;
+                break;
+            case 'alien':
+                this.addEnemyChance = 50;
+                this.enemyMinSpeed = 500;
+                this.enemyMaxSpeed = 900;
+                this.enemyStartMovement = 200;
+                break;
+        }
+    }
+
     update() {
 
 
@@ -673,7 +713,7 @@ export class Game extends Scene {
         }
 
         // Randomly add a new enemy with a certain chance
-        if (this.counter % Phaser.Math.Between(70, 100) == 0) {
+        if (this.counter % Phaser.Math.Between(this.addEnemyChance, 100) == 0) {
             this.addEnemy(); // Add a new enemy if the counter reaches a certain value
         }
 
