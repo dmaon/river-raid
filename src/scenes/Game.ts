@@ -11,6 +11,18 @@ type EnemiesTweens = {
     tween: Phaser.Tweens.Tween
 }
 
+type TouchControls = {
+    topLeftZone: boolean
+    leftZone: boolean
+    bottomLeftZone: boolean
+    topRightZone: boolean
+    rightZone: boolean
+    bottomRightZone: boolean
+    topZone: boolean
+    centerZone: boolean
+    bottomZone: boolean
+}
+
 
 // Custom sprite interface for enemy identification
 interface CustomSprite extends Phaser.Physics.Arcade.Sprite {
@@ -62,6 +74,17 @@ export class Game extends Scene {
     enemyMaxSpeed: integer;
     enemyStartMovement: integer;
     maxYPosition: integer;
+    topLeftTouchZone: Phaser.GameObjects.Zone;
+    leftTouchZone: Phaser.GameObjects.Zone;
+    bottomLeftTouchZone: Phaser.GameObjects.Zone;
+    topTouchZone: Phaser.GameObjects.Zone;
+    centerTouchZone: Phaser.GameObjects.Zone;
+    bottomTouchZone: Phaser.GameObjects.Zone;
+    topRightTouchZone: Phaser.GameObjects.Zone;
+    rightTouchZone: Phaser.GameObjects.Zone;
+    bottomRightTouchZone: Phaser.GameObjects.Zone;
+    private touchControls: TouchControls;
+    private resetTouchControls: TouchControls;
 
     constructor() {
         super('Game'); // Call the parent class constructor and set the scene key
@@ -89,6 +112,17 @@ export class Game extends Scene {
         this.enemyMinSpeed = 900;
         this.enemyMaxSpeed = 2000;
         this.enemyStartMovement = 1000;
+        this.resetTouchControls = {
+            topLeftZone: false,
+            leftZone: false,
+            bottomLeftZone: false,
+            topRightZone: false,
+            rightZone: false,
+            bottomRightZone: false,
+            topZone: false,
+            centerZone: false,
+            bottomZone: false,
+        }
 
 
         this.localStorageKey = "river-raid-high-score"
@@ -145,6 +179,7 @@ export class Game extends Scene {
     }
 
     create() {
+
         // Initialize sound effects
         this.planeEngineFx = this.sound.add('planeEngine')
         this.explosionFx = this.sound.add('explosion')
@@ -165,7 +200,7 @@ export class Game extends Scene {
         this.addEnemy()
 
         // Add scoreboard
-        this.AddScoreBoard()
+        this.addScoreBoard()
 
         // Add lifebar
         this.makeLifeBar()
@@ -175,10 +210,60 @@ export class Game extends Scene {
             this.startMode = true
             this.startCounter = true // Enable scoreboard
         });
+
+        // Make it works with touch gestures too
+        this.createTouchZones();
+
+        // Initialize touch controls
+        this.touchControls = this.resetTouchControls;
+
     }
 
+    createTouchZones() {
+        // Create left zone
+        const leftZone = this.add.zone(0, this.gameHeight / 4, this.gameWidth / 4, this.gameHeight / 2).setOrigin(0).setInteractive()
+        leftZone.on('pointerdown', () => { this.touchControls = { ...this.resetTouchControls, leftZone: true } });
+        leftZone.on('pointerup', () => { this.touchControls = { ...this.resetTouchControls } });
 
-    AddScoreBoard() {
+        const topLeftTouchZone = this.add.zone(0, 0, this.gameWidth / 4, this.gameHeight / 4).setOrigin(0).setInteractive()
+        topLeftTouchZone.on('pointerdown', () => { this.touchControls = { ...this.resetTouchControls, leftZone: true, topZone: true } });
+        topLeftTouchZone.on('pointerup', () => { this.touchControls = { ...this.resetTouchControls } });
+
+        const bottomLeftTouchZone = this.add.zone(0, this.gameHeight, this.gameWidth / 4, this.gameHeight / 4).setOrigin(0, 1).setInteractive()
+        bottomLeftTouchZone.on('pointerdown', () => { this.touchControls = { ...this.resetTouchControls, leftZone: true, bottomZone: true } });
+        bottomLeftTouchZone.on('pointerup', () => { this.touchControls = { ...this.resetTouchControls } });
+
+        // Create fire zone
+        const fireZone = this.add.zone(this.gameWidth / 4, this.gameHeight / 4, this.gameWidth / 2, this.gameHeight / 2).setOrigin(0).setInteractive()
+        fireZone.on('pointerdown', () => { this.touchControls = { ...this.resetTouchControls, centerZone: true } });
+        fireZone.on('pointerup', () => { this.touchControls = { ...this.resetTouchControls } });
+
+        // Create right zone
+        const rightZone = this.add.zone(this.gameWidth - (this.gameWidth / 4), this.gameHeight / 4, this.gameWidth / 4, this.gameHeight / 2).setOrigin(0).setInteractive();
+        rightZone.on('pointerdown', () => { this.touchControls = { ...this.resetTouchControls, rightZone: true } });
+        rightZone.on('pointerup', () => { this.touchControls = { ...this.resetTouchControls } });
+
+        const topRightTouchZone = this.add.zone(this.gameWidth - (this.gameWidth / 4), 0, this.gameWidth / 4, this.gameHeight / 4).setOrigin(0).setInteractive();
+        topRightTouchZone.on('pointerdown', () => { this.touchControls = { ...this.resetTouchControls, rightZone: true, topZone: true } });
+        topRightTouchZone.on('pointerup', () => { this.touchControls = { ...this.resetTouchControls } });
+
+        const bottomRightTouchZone = this.add.zone(this.gameWidth - (this.gameWidth / 4), this.gameHeight, this.gameWidth / 4, this.gameHeight / 4).setOrigin(0, 1).setInteractive();
+        bottomRightTouchZone.on('pointerdown', () => { this.touchControls = { ...this.resetTouchControls, rightZone: true, bottomZone: true } });
+        bottomRightTouchZone.on('pointerup', () => { this.touchControls = { ...this.resetTouchControls } });
+
+        // Create zone for increase speed
+        const topTouchZone = this.add.zone(this.gameWidth / 4, 0, this.gameWidth / 2, this.gameHeight / 4).setOrigin(0).setInteractive();
+        topTouchZone.on('pointerdown', () => { this.touchControls = { ...this.resetTouchControls, topZone: true } });
+        topTouchZone.on('pointerup', () => { this.touchControls = { ...this.resetTouchControls } });
+
+        // Create zone for decrease speed
+        const bottomTouchZone = this.add.zone(this.gameWidth / 4, this.gameHeight, this.gameWidth / 2, this.gameHeight / 4).setOrigin(0, 1).setInteractive();
+        bottomTouchZone.on('pointerdown', () => { this.touchControls = { ...this.resetTouchControls, bottomZone: true } });
+        bottomTouchZone.on('pointerup', () => { this.touchControls = { ...this.resetTouchControls } });
+
+    }
+
+    addScoreBoard() {
         // Add scoreboard text
         this.scoreBoard = this.add.bitmapText(10, 10, 'atari', this.playerScore.toString(), 20).setOrigin(0).setTint(0xFFFF00);
     }
@@ -635,13 +720,20 @@ export class Game extends Scene {
         }
     }
 
-    update() {
 
-
+    checkGameStartCondition() {
         // Check if the game should start or if the player has no remaining lives
         if (!this.startMode || this.lifeChance <= 0) {
-            return; // Exit the update function if the game hasn't started or if player has no lives left
+            return false; // Exit the update function if the game hasn't started or if player has no lives left
         }
+        return true
+    }
+
+    update() {
+
+        // Check if the game should start or if the player has no remaining lives
+        if (!this.checkGameStartCondition())
+            return
 
         // Increase player score
         this.increaseMoreScore(1)
@@ -660,13 +752,13 @@ export class Game extends Scene {
             this.plane.anims.play('plane-move-forward');
 
         // Check for user input from the cursor keys to move the plane
-        if (this.cursors.left.isDown) {
+        if (this.cursors.left.isDown || this.touchControls.leftZone) {
             this.plane.setVelocityX(-300); // Move the plane to the left
             if (!planeExplode)
                 this.plane.anims.play('plane-move-left', true); // Play the left move animation if not exploding
         }
 
-        if (this.cursors.right.isDown) {
+        if (this.cursors.right.isDown || this.touchControls.rightZone) {
             this.plane.setVelocityX(300); // Move the plane to the right
             if (!planeExplode)
                 this.plane.anims.play('plane-move-right', true); // Play the right move animation if not exploding
@@ -676,10 +768,10 @@ export class Game extends Scene {
         this.counter++;
 
         // Check if the up arrow key is being held down to increase speed
-        if (this.cursors.up.isDown || (this.cursors.up.isDown && (this.cursors.left.isDown || this.cursors.right.isDown))) {
+        if (this.cursors.up.isDown || this.touchControls.topZone || (this.cursors.up.isDown && (this.cursors.left.isDown || this.cursors.right.isDown)) || (this.touchControls.topZone && (this.touchControls.leftZone || this.touchControls.rightZone))) {
             this.keyHoldDuration += 10; // Increase the hold duration
             this.planeEngineFx.setRate(1.5); // Speed up the plane engine sound effect
-        } else if (!this.cursors.up.isDown && !this.cursors.left.isDown && !this.cursors.right.isDown) {
+        } else if (!this.cursors.up.isDown && !this.cursors.left.isDown && !this.cursors.right.isDown && !this.touchControls.topZone && !this.touchControls.leftZone && !this.touchControls.rightZone) {
             this.keyHoldDuration = 0; // Reset the speed if no direction key is pressed
             this.planeEngineFx.setRate(1); // Reset the engine sound effect to normal speed
         }
@@ -688,7 +780,7 @@ export class Game extends Scene {
         let speed = Phaser.Math.Clamp(this.moveSpeed + (this.keyHoldDuration / 100), this.moveSpeed, this.maxSpeed);
 
         // If the down arrow key is pressed, reduce the speed and change the engine sound
-        if (this.cursors.down.isDown) {
+        if (this.cursors.down.isDown || this.touchControls.bottomZone) {
             speed = 3; // Slow down the plane significantly
             this.planeEngineFx.setRate(0.5); // Slow down the engine sound effect
         }
@@ -728,7 +820,7 @@ export class Game extends Scene {
         }
 
         // Check if the space key is pressed to fire bullets
-        if (this.cursors.space.isDown) {
+        if (this.cursors.space.isDown || this.touchControls.centerZone) {
             this.fireBullet(); // Fire a bullet if the space key is pressed
         }
 

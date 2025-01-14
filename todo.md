@@ -4,4 +4,5 @@
 + add new enemy
 x add fuel system
 + make it harder when player get more score
-- make it works with touch gestures
++ make it works with touch gestures
+- change game config
