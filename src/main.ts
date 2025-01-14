@@ -13,7 +13,7 @@ const config: Types.Core.GameConfig = {
     parent: 'game-container',
     backgroundColor: '#2d32b8',
     scale: {
-        mode: Scale.FIT,
+        mode: Scale.EXPAND,
         autoCenter: Scale.CENTER_BOTH
     },
     scene: [
@@ -27,6 +27,16 @@ const config: Types.Core.GameConfig = {
         arcade: {
             // debug: true,
         },
+    },
+    title: 'River Raid',
+    version: '1.5',
+    banner: {
+        text: '#ffff00',
+        background: [
+            '#ffff00',
+            '#2d32b8',
+        ],
+        hidePhaser: true
     },
 };
 
