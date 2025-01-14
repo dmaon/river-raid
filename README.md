@@ -12,7 +12,18 @@ Welcome to River Raid, a web-based 2D game inspired by the classic Atari game of
 - **Sound effects**: Includes sound effects for explosions, engine sounds, and more.
 - **Responsive controls**: Players can control the speed of their plane, adjust their movement direction, and fire bullets.
 
+## New Features Added
 
+This game has been enhanced with the following features:
+
+- **Scoreboard**: A live scoreboard is now displayed during the game to track your current score in real time.
+- **LocalStorage Integration for High Scores**: The highest score achieved is saved locally in the browser using LocalStorage, so you can challenge yourself to beat your previous best.
+- **Life Information**: The player’s remaining lives are now displayed on the screen, making it easier to track how many chances you have left.
+- **New Enemy Types**: Additional enemy units have been introduced to add variety and challenge to the gameplay.
+- **Dynamic Difficulty**: The game becomes progressively harder as the player’s score increases, ensuring a consistent level of challenge.
+- **Touch Gesture Controls**: The game is now compatible with touch devices, allowing players to control the plane using gestures for a more intuitive experience on mobile.
+
+These features elevate the gameplay experience, making it more engaging, challenging, and accessible across various devices.
 
 
 ### Versions
